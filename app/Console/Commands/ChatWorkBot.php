@@ -8,12 +8,13 @@ use App\Models\Chatwork;
 use App\Models\User;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
+use Arr;
 
 class ChatworkSchedules extends Command
 {
-    protected $signature = 'chatwork-schdule:run';
+    protected $signature = 'chatwork-bot:run';
 
-    protected $description = 'Command description';
+    protected $description = 'Bot send message to room chatwork';
 
     public function __construct()
     {
@@ -22,26 +23,10 @@ class ChatworkSchedules extends Command
 
     public function handle()
     {
-        // caclute time number
-        $nowUtc = Carbon::now(); // UTC
-        $nowVn = Carbon::now()->setTimezone('Asia/Ho_Chi_Minh');
-
-        $currentHour = $nowVn->hour;
-        $currentMinute = $nowVn->minute;
-        $timeNumber = $currentHour * 2;
-
-        if ($currentMinute > 29) {
-            $timeNumber += 1;
-        }
-
-        $schedules = ChatworkSchedule::where('time_number', $timeNumber)->get();
-        foreach ($schedules as $schedule) {
-            $chatwork = Chatwork::find($schedule->user_id);
-            if (empty($chatwork)) {
-                continue;
-            }
-            $this->_sendMessageToChatwork($chatwork->token, $schedule->group_id, $schedule->message);
-        }
+        $token = config('chatwork.chatwork_api_key');
+        $groupId = config('chatwork.chatwork_room_id');
+        $message = $this->_getRandomMaxim();
+        $this->_sendMessageToChatwork($token, $groupId, $message);
     }
 
     protected function _getClientConnect($token = '')
@@ -63,8 +48,15 @@ class ChatworkSchedules extends Command
                 ],
             ]);
         } catch (\Exception $e) {
-            dd($e);
             \Log::error($e->getMessage());
         }
+    }
+
+    protected function _getRandomMaxim()
+    {
+        $title = config('chatwork.maxim.title');
+        $content = Arr::get(config('chatwork.maxim.content'), array_rand(config('chatwork.maxim.content')));
+
+        return $title . PHP_EOL . '[info]' . $content . '[/info]';
     }
 }
